@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Boxy Adventure</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #4FC3F7 0%, #81D4FA 100%);
+    font-family: 'Comic Sans MS', 'Trebuchet MS', sans-serif;
+    overflow: hidden;
+  }
+  h1 {
+    color: white;
+    text-shadow: 3px 3px 0 #FF8C00, 6px 6px 0 rgba(0,0,0,0.2);
+    font-size: 2.2rem;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+  }
+  #gameCanvas {
+    border: 6px solid #2E7D32;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    background: #87CEEB;
+    display: block;
+  }
+  .controls {
+    margin-top: 12px;
+    color: white;
+    font-size: 1rem;
+    background: rgba(0,0,0,0.25);
+    padding: 8px 18px;
+    border-radius: 20px;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+  }
+  .controls kbd {
+    background: white;
+    color: #333;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin: 0 3px;
+    font-family: inherit;
+    box-shadow: 0 2px 0 #ccc;
+    font-size: 0.9rem;
+  }
+  .game-wrap {
+    position: relative;
+    line-height: 0; /* prevent inline-canvas extra space */
+  }
+  .retry-btn {
+    position: absolute;
+    left: 50%;
+    bottom: 70px;
+    transform: translateX(-50%);
+    padding: 14px 36px;
+    font-family: 'Comic Sans MS', 'Trebuchet MS', sans-serif;
+    font-size: 22px;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(180deg, #FFB74D 0%, #FF9800 100%);
+    border: 4px solid #E65100;
+    border-radius: 14px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #BF360C, 0 10px 24px rgba(0,0,0,0.35);
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+    letter-spacing: 1px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease, transform 0.1s, box-shadow 0.1s;
+    line-height: 1;
+  }
+  .retry-btn.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .retry-btn:hover {
+    background: linear-gradient(180deg, #FFC470 0%, #FFA726 100%);
+  }
+  .retry-btn:active {
+    transform: translateX(-50%) translateY(4px);
+    box-shadow: 0 2px 0 #BF360C, 0 4px 12px rgba(0,0,0,0.35);
+  }
+</style>
+</head>
+<body>
+  <h1>🟧 Boxy Adventure 🌱</h1>
+  <div class="game-wrap">
+    <canvas id="gameCanvas" width="900" height="500"></canvas>
+    <button id="retryBtn" class="retry-btn" type="button">↻ Retry Game</button>
+  </div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// ---------- Player ----------
+const player = {
+  x: 100, y: 200,
+  w: 40, h: 40,
+  vx: 0, vy: 0,
+  speed: 0.6,
+  maxSpeed: 5,
+  friction: 0.82,
+  jumpPower: 13,
+  onGround: false,
+  facing: 1,
+  squash: 1, // for cartoon squash & stretch
+  blink: 0,
+};
+
+// ---------- World ----------
+const GRAVITY = 0.6;
+const GROUND_Y = H - 60;
+
+// ---------- Levels ----------
+const LEVELS = [
+  // ===== LEVEL 1 — Sunny Meadow =====
+  {
+    name: 'Sunny Meadow',
+    width: 7200,
+    skyTop: '#4FC3F7',
+    skyBottom: '#B3E5FC',
+    finishX: 7050,
+    platforms: [
+      // ground (with gaps)
+      { x: 0,    y: GROUND_Y, w: 600,  h: 60, ground: true },
+      { x: 720,  y: GROUND_Y, w: 500,  h: 60, ground: true },
+      { x: 1340, y: GROUND_Y, w: 400,  h: 60, ground: true },
+      { x: 1860, y: GROUND_Y, w: 700,  h: 60, ground: true },
+      { x: 2700, y: GROUND_Y, w: 900,  h: 60, ground: true },
+      { x: 3750, y: GROUND_Y, w: 600,  h: 60, ground: true },
+      { x: 4500, y: GROUND_Y, w: 600,  h: 60, ground: true },
+      { x: 5250, y: GROUND_Y, w: 600,  h: 60, ground: true },
+      { x: 6000, y: GROUND_Y, w: 1200, h: 60, ground: true },
+      // floating platforms
+      { x: 300,  y: 360, w: 110, h: 22 },
+      { x: 470,  y: 280, w: 110, h: 22 },
+      { x: 640,  y: 320, w: 90,  h: 22 },
+      { x: 850,  y: 300, w: 130, h: 22 },
+      { x: 1060, y: 240, w: 110, h: 22 },
+      { x: 1230, y: 320, w: 90,  h: 22 },
+      { x: 1430, y: 280, w: 100, h: 22 },
+      { x: 1600, y: 220, w: 110, h: 22 },
+      { x: 1760, y: 320, w: 80,  h: 22 },
+      { x: 2000, y: 340, w: 110, h: 22 },
+      { x: 2170, y: 260, w: 110, h: 22 },
+      { x: 2340, y: 200, w: 110, h: 22 },
+      { x: 2520, y: 280, w: 110, h: 22 },
+      { x: 2750, y: 360, w: 130, h: 22 },
+      { x: 2950, y: 280, w: 110, h: 22 },
+      { x: 3140, y: 220, w: 130, h: 22 },
+      { x: 3320, y: 280, w: 110, h: 22 },
+      { x: 3500, y: 340, w: 100, h: 22 },
+      { x: 3850, y: 280, w: 100, h: 22 },
+      { x: 4000, y: 220, w: 100, h: 22 },
+      { x: 4150, y: 280, w: 100, h: 22 },
+      { x: 4300, y: 340, w: 100, h: 22 },
+      { x: 4600, y: 320, w: 100, h: 22 },
+      { x: 4750, y: 240, w: 100, h: 22 },
+      { x: 4900, y: 180, w: 100, h: 22 },
+      { x: 5060, y: 280, w: 100, h: 22 },
+      { x: 5350, y: 280, w: 100, h: 22 },
+      { x: 5500, y: 220, w: 100, h: 22 },
+      { x: 5660, y: 280, w: 100, h: 22 },
+      { x: 5820, y: 340, w: 100, h: 22 },
+      { x: 6080, y: 340, w: 110, h: 22 },
+      { x: 6200, y: 280, w: 110, h: 22 },
+      { x: 6400, y: 220, w: 110, h: 22 },
+      { x: 6600, y: 280, w: 110, h: 22 },
+      { x: 6800, y: 240, w: 110, h: 22 },
+    ],
+    coinSpots: [
+      [340, 320], [395, 320], [510, 240], [565, 240],
+      [680, 280], [890, 260], [945, 260], [1000, 260],
+      [1100, 200], [1270, 280], [1470, 240], [1640, 180],
+      [1800, 280], [2040, 300], [2210, 220], [2380, 160],
+      [2435, 160], [2560, 240], [2790, 320], [2990, 240],
+      [3180, 180], [3360, 240], [3540, 300],
+      [3890, 240], [4040, 180], [4190, 240], [4340, 300],
+      [4640, 280], [4790, 200], [4940, 140], [5100, 240],
+      [5390, 240], [5540, 180], [5700, 240], [5860, 300],
+      [6130, 300],
+      [6240, 240], [6440, 180], [6640, 240], [6840, 200],
+    ],
+  },
+
+  // ===== LEVEL 2 — Sunset Hills =====
+  {
+    name: 'Sunset Hills',
+    width: 7200,
+    skyTop: '#FF7043',
+    skyBottom: '#FFCC80',
+    finishX: 7050,
+    platforms: [
+      // ground (with gaps — trickier spacing)
+      { x: 0,    y: GROUND_Y, w: 500,  h: 60, ground: true },
+      { x: 650,  y: GROUND_Y, w: 300,  h: 60, ground: true },
+      { x: 1100, y: GROUND_Y, w: 400,  h: 60, ground: true },
+      { x: 1650, y: GROUND_Y, w: 250,  h: 60, ground: true },
+      { x: 2050, y: GROUND_Y, w: 600,  h: 60, ground: true },
+      { x: 2800, y: GROUND_Y, w: 350,  h: 60, ground: true },
+      { x: 3300, y: GROUND_Y, w: 400,  h: 60, ground: true },
+      { x: 3850, y: GROUND_Y, w: 600,  h: 60, ground: true },
+      { x: 4600, y: GROUND_Y, w: 350,  h: 60, ground: true },
+      { x: 5100, y: GROUND_Y, w: 400,  h: 60, ground: true },
+      { x: 5650, y: GROUND_Y, w: 350,  h: 60, ground: true },
+      { x: 6150, y: GROUND_Y, w: 1050, h: 60, ground: true },
+      // staircase up
+      { x: 200,  y: 380, w: 90, h: 22 },
+      { x: 320,  y: 320, w: 90, h: 22 },
+      { x: 440,  y: 260, w: 90, h: 22 },
+      // gap leap section
+      { x: 720,  y: 280, w: 100, h: 22 },
+      { x: 870,  y: 220, w: 100, h: 22 },
+      { x: 1020, y: 280, w: 100, h: 22 },
+      // descending
+      { x: 1180, y: 320, w: 100, h: 22 },
+      { x: 1330, y: 240, w: 100, h: 22 },
+      { x: 1480, y: 180, w: 100, h: 22 },
+      // floaters above pit
+      { x: 1700, y: 300, w: 90,  h: 22 },
+      { x: 1860, y: 240, w: 90,  h: 22 },
+      // mid section zigzag
+      { x: 2120, y: 320, w: 100, h: 22 },
+      { x: 2280, y: 240, w: 100, h: 22 },
+      { x: 2440, y: 180, w: 100, h: 22 },
+      { x: 2600, y: 260, w: 100, h: 22 },
+      // tower climb
+      { x: 2820, y: 360, w: 90, h: 22 },
+      { x: 2960, y: 280, w: 90, h: 22 },
+      { x: 3100, y: 200, w: 90, h: 22 },
+      // long jumps
+      { x: 3260, y: 280, w: 90, h: 22 },
+      { x: 3420, y: 220, w: 90, h: 22 },
+      { x: 3580, y: 280, w: 90, h: 22 },
+      { x: 3740, y: 340, w: 90, h: 22 },
+      // mid-air corridor
+      { x: 3920, y: 260, w: 100, h: 22 },
+      { x: 4080, y: 200, w: 100, h: 22 },
+      { x: 4240, y: 260, w: 100, h: 22 },
+      { x: 4400, y: 320, w: 100, h: 22 },
+      // descending stairs
+      { x: 4640, y: 300, w: 90, h: 22 },
+      { x: 4790, y: 240, w: 90, h: 22 },
+      { x: 4940, y: 180, w: 90, h: 22 },
+      // crossing
+      { x: 5160, y: 280, w: 90, h: 22 },
+      { x: 5310, y: 220, w: 90, h: 22 },
+      { x: 5460, y: 280, w: 90, h: 22 },
+      // final approach
+      { x: 5700, y: 320, w: 90, h: 22 },
+      { x: 5850, y: 260, w: 90, h: 22 },
+      { x: 6000, y: 200, w: 90, h: 22 },
+      // home stretch
+      { x: 6280, y: 280, w: 110, h: 22 },
+      { x: 6480, y: 220, w: 110, h: 22 },
+      { x: 6680, y: 260, w: 110, h: 22 },
+      { x: 6880, y: 200, w: 110, h: 22 },
+    ],
+    coinSpots: [
+      [240, 340], [360, 280], [480, 220], [560, 220],
+      [770, 240], [920, 180], [1070, 240],
+      [1230, 280], [1380, 200], [1530, 140],
+      [1740, 260], [1900, 200],
+      [2160, 280], [2320, 200], [2480, 140], [2640, 220],
+      [2860, 320], [3000, 240], [3140, 160], [3185, 160],
+      [3300, 240], [3460, 180], [3620, 240], [3780, 300],
+      [3960, 220], [4120, 160], [4280, 220], [4440, 280],
+      [4680, 260], [4830, 200], [4980, 140],
+      [5200, 240], [5350, 180], [5500, 240],
+      [5740, 280], [5890, 220], [6040, 160],
+      [6320, 240], [6520, 180], [6720, 220], [6920, 160],
+    ],
+  },
+];
+
+// ---------- Mutable world (set by loadLevel) ----------
+let platforms = [];
+let clouds = [];
+let hills = [];
+let flowers = [];
+let coins = [];
+let WORLD_W = 0;
+let finishX = 0;
+let skyTop = '#4FC3F7', skyBottom = '#B3E5FC';
+
+// ---------- Camera & particles ----------
+let camX = 0;
+let particles = [];
+
+// ---------- Game state ----------
+let currentLevel = 0;
+let state = 'playing';   // 'playing' | 'complete' | 'won'
+let completeTimer = 0;
+let score = 0;            // coins on current level
+let totalScore = 0;       // coins collected across all levels
+
+function loadLevel(index) {
+  const L = LEVELS[index];
+  WORLD_W = L.width;
+  finishX = L.finishX;
+  skyTop = L.skyTop;
+  skyBottom = L.skyBottom;
+
+  platforms = L.platforms.map(p => ({ ...p }));
+
+  // flowers on ground sections
+  flowers = [];
+  for (const p of platforms.filter(p => p.ground)) {
+    for (let i = 0; i < p.w / 50; i++) {
+      if (Math.random() < 0.55) {
+        flowers.push({
+          x: p.x + 15 + Math.random() * (p.w - 30),
+          y: p.y - 2,
+          color: ['#FF4081','#FFEB3B','#E91E63','#FFFFFF','#9C27B0'][Math.floor(Math.random()*5)],
+        });
+      }
+    }
+  }
+
+  // clouds
+  clouds = [];
+  const cloudCount = Math.floor(WORLD_W / 200);
+  for (let i = 0; i < cloudCount; i++) {
+    clouds.push({
+      x: Math.random() * WORLD_W,
+      y: 30 + Math.random() * 140,
+      s: 0.6 + Math.random() * 0.8,
+      speed: 0.2 + Math.random() * 0.3,
+    });
+  }
+
+  // hills
+  hills = [];
+  const hillCount = Math.ceil(WORLD_W / 280);
+  for (let i = 0; i < hillCount; i++) {
+    hills.push({
+      x: i * 320 + Math.random() * 100,
+      r: 110 + Math.random() * 80,
+    });
+  }
+
+  // coins
+  coins = L.coinSpots.map(([x, y]) => ({
+    x, y, taken: false, t: Math.random() * Math.PI * 2,
+  }));
+
+  // reset player
+  player.x = 80;
+  player.y = 200;
+  player.vx = 0;
+  player.vy = 0;
+  player.facing = 1;
+  camX = 0;
+  particles = [];
+  score = 0;
+}
+
+// ---------- Input ----------
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (['ArrowLeft','ArrowRight','Space','KeyA','KeyD'].includes(e.code)) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ---------- Retry button ----------
+const retryBtn = document.getElementById('retryBtn');
+retryBtn.addEventListener('click', () => {
+  retryBtn.classList.remove('show');
+  retryBtn.blur(); // so Space/Enter don't re-trigger the button
+  currentLevel = 0;
+  totalScore = 0;
+  loadLevel(0);
+  state = 'playing';
+});
+
+function spawnParticles(x, y, color, n = 8) {
+  for (let i = 0; i < n; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 6,
+      vy: (Math.random() - 0.5) * 6 - 2,
+      life: 30,
+      color,
+      size: 2 + Math.random() * 3,
+    });
+  }
+}
+
+// ---------- Update ----------
+function update() {
+  // Level-complete and won states pause gameplay
+  if (state === 'complete') {
+    completeTimer--;
+    // Celebratory particles bursting from player
+    if (completeTimer % 6 === 0) {
+      const colors = ['#FFD600','#FF4081','#4FC3F7','#81C784','#BA68C8'];
+      spawnParticles(
+        player.x + player.w/2, player.y + player.h/2,
+        colors[Math.floor(Math.random()*colors.length)], 8
+      );
+    }
+    // Update particles
+    for (const pt of particles) {
+      pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.3; pt.life--;
+    }
+    particles = particles.filter(p => p.life > 0);
+
+    if (completeTimer <= 0) {
+      totalScore += score;
+      if (currentLevel >= LEVELS.length - 1) {
+        state = 'won';
+        retryBtn.classList.add('show');
+      } else {
+        currentLevel++;
+        loadLevel(currentLevel);
+        state = 'playing';
+      }
+    }
+    return;
+  }
+  if (state === 'won') {
+    for (const pt of particles) {
+      pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.3; pt.life--;
+    }
+    particles = particles.filter(p => p.life > 0);
+    return;
+  }
+
+  // Horizontal input (arrows or A/D)
+  const leftHeld  = keys['ArrowLeft']  || keys['KeyA'];
+  const rightHeld = keys['ArrowRight'] || keys['KeyD'];
+  if (leftHeld)  { player.vx -= player.speed; player.facing = -1; }
+  if (rightHeld) { player.vx += player.speed; player.facing = 1; }
+  if (!leftHeld && !rightHeld) player.vx *= player.friction;
+
+  player.vx = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.vx));
+
+  // Jump
+  if (keys['Space'] && player.onGround) {
+    player.vy = -player.jumpPower;
+    player.onGround = false;
+    player.squash = 1.4; // stretch up
+    spawnParticles(player.x + player.w/2, player.y + player.h, '#A5D6A7', 6);
+  }
+
+  // Gravity
+  player.vy += GRAVITY;
+  if (player.vy > 18) player.vy = 18;
+
+  // Move + collide X
+  player.x += player.vx;
+  for (const p of platforms) {
+    if (rectCollide(player, p)) {
+      if (player.vx > 0) player.x = p.x - player.w;
+      else if (player.vx < 0) player.x = p.x + p.w;
+      player.vx = 0;
+    }
+  }
+
+  // Move + collide Y
+  player.y += player.vy;
+  player.onGround = false;
+  for (const p of platforms) {
+    if (rectCollide(player, p)) {
+      if (player.vy > 0) {
+        player.y = p.y - player.h;
+        if (!player.onGround && player.vy > 4) {
+          spawnParticles(player.x + player.w/2, player.y + player.h, '#A5D6A7', 4);
+          player.squash = 0.7; // squash on land
+        }
+        player.vy = 0;
+        player.onGround = true;
+      } else if (player.vy < 0) {
+        player.y = p.y + p.h;
+        player.vy = 0;
+      }
+    }
+  }
+
+  // World bounds
+  if (player.x < 0) player.x = 0;
+  if (player.x + player.w > WORLD_W) player.x = WORLD_W - player.w;
+
+  // Finish flag — touching it completes the level
+  if (player.x + player.w > finishX && state === 'playing') {
+    state = 'complete';
+    completeTimer = 150; // ~2.5 seconds at 60fps
+    spawnParticles(player.x + player.w/2, player.y + player.h/2, '#FFD600', 24);
+  }
+
+  // Fell off the world -> respawn
+  if (player.y > H + 100) {
+    player.x = 100; player.y = 200;
+    player.vx = 0; player.vy = 0;
+  }
+
+  // Squash recovery
+  player.squash += (1 - player.squash) * 0.15;
+
+  // Blink
+  player.blink--;
+  if (player.blink < -200) player.blink = 8;
+
+  // Camera
+  const targetCam = player.x - W / 2 + player.w / 2;
+  camX += (targetCam - camX) * 0.1;
+  camX = Math.max(0, Math.min(WORLD_W - W, camX));
+
+  // Coins
+  for (const c of coins) {
+    if (!c.taken) {
+      c.t += 0.1;
+      if (Math.abs(player.x + player.w/2 - c.x) < 22 &&
+          Math.abs(player.y + player.h/2 - c.y) < 22) {
+        c.taken = true;
+        score++;
+        spawnParticles(c.x, c.y, '#FFD600', 12);
+      }
+    }
+  }
+
+  // Clouds drift
+  for (const cl of clouds) {
+    cl.x -= cl.speed;
+    if (cl.x < camX - 200) cl.x = camX + W + 200;
+  }
+
+  // Particles
+  for (const pt of particles) {
+    pt.x += pt.vx;
+    pt.y += pt.vy;
+    pt.vy += 0.3;
+    pt.life--;
+  }
+  particles = particles.filter(p => p.life > 0);
+}
+
+function rectCollide(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x &&
+         a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+// ---------- Draw ----------
+function draw() {
+  // Sky gradient (per-level)
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, skyTop);
+  sky.addColorStop(1, skyBottom);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  // Sun
+  drawSun(W - 90 - camX * 0.05, 80);
+
+  // Far hills (parallax 0.3)
+  ctx.fillStyle = '#66BB6A';
+  for (const h of hills) {
+    const hx = h.x - camX * 0.3;
+    if (hx + h.r * 2 > 0 && hx - h.r * 2 < W) {
+      ctx.beginPath();
+      ctx.arc(hx, GROUND_Y + 20, h.r, Math.PI, 0);
+      ctx.fill();
+    }
+  }
+
+  // Mid hills (parallax 0.55, darker)
+  ctx.fillStyle = '#43A047';
+  for (let i = 0; i < hills.length; i += 2) {
+    const h = hills[i];
+    const hx = h.x * 1.2 - camX * 0.55;
+    if (hx + h.r * 2 > 0 && hx - h.r * 2 < W) {
+      ctx.beginPath();
+      ctx.arc(hx, GROUND_Y + 30, h.r * 0.85, Math.PI, 0);
+      ctx.fill();
+    }
+  }
+
+  // Clouds (parallax 0.5)
+  for (const cl of clouds) {
+    drawCloud(cl.x - camX * 0.5, cl.y, cl.s);
+  }
+
+  // Translate world for foreground
+  ctx.save();
+  ctx.translate(-camX, 0);
+
+  // Platforms
+  for (const p of platforms) {
+    drawPlatform(p);
+  }
+
+  // Flowers
+  for (const f of flowers) drawFlower(f.x, f.y, f.color);
+
+  // Coins
+  for (const c of coins) if (!c.taken) drawCoin(c.x, c.y, c.t);
+
+  // Finish flag
+  drawFinishFlag(finishX, GROUND_Y);
+
+  // Particles
+  for (const pt of particles) {
+    ctx.globalAlpha = Math.max(0, pt.life / 30);
+    ctx.fillStyle = pt.color;
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Player
+  drawPlayer();
+
+  ctx.restore();
+
+  // HUD
+  drawHUD();
+
+  // Overlay messages
+  if (state === 'complete') drawCompleteOverlay();
+  if (state === 'won') drawWonOverlay();
+}
+
+function drawFinishFlag(x, groundY) {
+  // Pole
+  ctx.fillStyle = '#5D4037';
+  ctx.fillRect(x - 3, groundY - 130, 6, 130);
+  // Pole top knob
+  ctx.fillStyle = '#FFD600';
+  ctx.beginPath(); ctx.arc(x, groundY - 132, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#FF8F00'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Waving flag
+  const t = performance.now() / 200;
+  ctx.fillStyle = '#FF5252';
+  ctx.beginPath();
+  ctx.moveTo(x, groundY - 125);
+  for (let i = 0; i <= 10; i++) {
+    const fx = x + (i / 10) * 60;
+    const fy = groundY - 125 + Math.sin(t + i * 0.6) * 4;
+    ctx.lineTo(fx, fy);
+  }
+  ctx.lineTo(x + 55, groundY - 95);
+  for (let i = 10; i >= 0; i--) {
+    const fx = x + (i / 10) * 60;
+    const fy = groundY - 95 + Math.sin(t + i * 0.6) * 4;
+    ctx.lineTo(fx, fy);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#C62828';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Star on flag
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 18px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('★', x + 28, groundY - 110 + Math.sin(t + 3) * 3);
+}
+
+function drawCompleteOverlay() {
+  // Dim background
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Bouncy entrance
+  const elapsed = 150 - completeTimer;
+  const scale = Math.min(1, elapsed / 20);
+  const bounce = Math.sin(elapsed * 0.15) * 4;
+
+  ctx.save();
+  ctx.translate(W / 2, H / 2 + bounce);
+  ctx.scale(scale, scale);
+
+  // Title shadow
+  ctx.font = 'bold 64px "Comic Sans MS", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillText('LEVEL COMPLETE!', 5, 5);
+
+  // Title with stroke
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = '#E65100';
+  ctx.strokeText('LEVEL COMPLETE!', 0, 0);
+  ctx.fillStyle = '#FFEB3B';
+  ctx.fillText('LEVEL COMPLETE!', 0, 0);
+
+  // Subtitle
+  ctx.font = 'bold 22px "Comic Sans MS", sans-serif';
+  ctx.fillStyle = 'white';
+  ctx.fillText(
+    `★ ${score} / ${coins.length} stars collected`,
+    0, 50
+  );
+
+  if (currentLevel < LEVELS.length - 1) {
+    ctx.font = 'bold 18px "Comic Sans MS", sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillText('Get ready for ' + LEVELS[currentLevel + 1].name + '...', 0, 90);
+  }
+
+  ctx.restore();
+}
+
+function drawWonOverlay() {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.fillRect(0, 0, W, H);
+
+  const t = performance.now() / 300;
+  ctx.save();
+  ctx.translate(W / 2, H / 2);
+
+  // Title
+  ctx.font = 'bold 84px "Comic Sans MS", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillText('GAME WON', 6, 6 + Math.sin(t) * 3);
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = '#E65100';
+  ctx.strokeText('GAME WON', 0, Math.sin(t) * 3);
+  ctx.fillStyle = '#FFEB3B';
+  ctx.fillText('GAME WON', 0, Math.sin(t) * 3);
+
+  // Stats
+  ctx.font = 'bold 24px "Comic Sans MS", sans-serif';
+  ctx.fillStyle = 'white';
+  ctx.fillText(`★ ${totalScore} stars collected`, 0, 70);
+
+  ctx.restore();
+}
+
+function drawSun(x, y) {
+  // Rays
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(performance.now() / 4000);
+  ctx.fillStyle = '#FFEB3B';
+  for (let i = 0; i < 8; i++) {
+    ctx.rotate(Math.PI / 4);
+    ctx.fillRect(35, -4, 18, 8);
+  }
+  ctx.restore();
+  // Body
+  ctx.fillStyle = '#FFEB3B';
+  ctx.beginPath(); ctx.arc(x, y, 32, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#FFC107';
+  ctx.beginPath(); ctx.arc(x, y, 32, 0, Math.PI * 2); ctx.lineWidth = 3;
+  ctx.strokeStyle = '#FFA000'; ctx.stroke();
+  // Smile
+  ctx.strokeStyle = '#5D4037';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(x, y + 4, 12, 0.2, Math.PI - 0.2); ctx.stroke();
+  // Eyes
+  ctx.fillStyle = '#5D4037';
+  ctx.beginPath(); ctx.arc(x - 10, y - 6, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 10, y - 6, 3, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawCloud(x, y, s) {
+  ctx.fillStyle = 'white';
+  ctx.beginPath();
+  ctx.arc(x, y, 18 * s, 0, Math.PI * 2);
+  ctx.arc(x + 18 * s, y - 8 * s, 22 * s, 0, Math.PI * 2);
+  ctx.arc(x + 40 * s, y, 18 * s, 0, Math.PI * 2);
+  ctx.arc(x + 22 * s, y + 8 * s, 18 * s, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPlatform(p) {
+  // Dirt body
+  ctx.fillStyle = '#8B5A2B';
+  ctx.fillRect(p.x, p.y + 14, p.w, p.h - 14);
+  // Dirt texture dots
+  ctx.fillStyle = '#6D4C2A';
+  for (let i = 0; i < p.w; i += 24) {
+    ctx.beginPath();
+    ctx.arc(p.x + i + 12, p.y + 28 + (i % 2) * 10, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Grass top (rounded)
+  ctx.fillStyle = '#4CAF50';
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y + 16);
+  ctx.lineTo(p.x, p.y + 6);
+  ctx.quadraticCurveTo(p.x + 6, p.y, p.x + 14, p.y + 4);
+  for (let i = 14; i < p.w - 14; i += 14) {
+    ctx.quadraticCurveTo(p.x + i + 7, p.y - 4, p.x + i + 14, p.y + 4);
+  }
+  ctx.quadraticCurveTo(p.x + p.w - 6, p.y, p.x + p.w, p.y + 6);
+  ctx.lineTo(p.x + p.w, p.y + 16);
+  ctx.closePath();
+  ctx.fill();
+  // Lighter grass highlight
+  ctx.fillStyle = '#81C784';
+  for (let i = 6; i < p.w - 6; i += 14) {
+    ctx.beginPath();
+    ctx.arc(p.x + i + 4, p.y + 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Grass blades
+  ctx.strokeStyle = '#2E7D32';
+  ctx.lineWidth = 1.5;
+  for (let i = 8; i < p.w - 8; i += 18) {
+    ctx.beginPath();
+    ctx.moveTo(p.x + i, p.y + 4);
+    ctx.lineTo(p.x + i + 2, p.y - 4);
+    ctx.stroke();
+  }
+}
+
+function drawFlower(x, y, color) {
+  ctx.fillStyle = '#388E3C';
+  ctx.fillRect(x - 1, y - 8, 2, 8);
+  ctx.fillStyle = color;
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(x + Math.cos(a) * 3, y - 10 + Math.sin(a) * 3, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#FFEB3B';
+  ctx.beginPath();
+  ctx.arc(x, y - 10, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawCoin(x, y, t) {
+  const wob = Math.abs(Math.cos(t));
+  ctx.save();
+  ctx.translate(x, y + Math.sin(t) * 3);
+  ctx.scale(wob * 0.7 + 0.3, 1);
+  ctx.fillStyle = '#FFD600';
+  ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#FF8F00';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = '#FFEE58';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('★', 0, 1);
+  ctx.restore();
+}
+
+function drawPlayer() {
+  const sq = player.squash;
+  const w = player.w / sq;
+  const h = player.h * sq;
+  const cx = player.x + player.w / 2;
+  const by = player.y + player.h; // bottom y
+  const x = cx - w / 2;
+  const y = by - h;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(cx, GROUND_Y, 18, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body (orange box with rounded corners)
+  roundRect(x, y, w, h, 7);
+  const grad = ctx.createLinearGradient(x, y, x, y + h);
+  grad.addColorStop(0, '#FFB74D');
+  grad.addColorStop(0.5, '#FF9800');
+  grad.addColorStop(1, '#F57C00');
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = '#E65100';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  roundRect(x + 5, y + 5, w * 0.35, h * 0.2, 4);
+  ctx.fill();
+
+  // Face
+  const eyeY = y + h * 0.4;
+  const mouthY = y + h * 0.65;
+  const eyeOffsetX = player.facing * 4;
+
+  // Eye whites
+  ctx.fillStyle = 'white';
+  ctx.beginPath();
+  ctx.arc(x + w * 0.32 + eyeOffsetX, eyeY, 6, 0, Math.PI * 2);
+  ctx.arc(x + w * 0.68 + eyeOffsetX, eyeY, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#3E2723';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Pupils (look in movement direction)
+  if (player.blink > 0) {
+    ctx.strokeStyle = '#3E2723';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.32 + eyeOffsetX - 4, eyeY);
+    ctx.lineTo(x + w * 0.32 + eyeOffsetX + 4, eyeY);
+    ctx.moveTo(x + w * 0.68 + eyeOffsetX - 4, eyeY);
+    ctx.lineTo(x + w * 0.68 + eyeOffsetX + 4, eyeY);
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = '#3E2723';
+    const pupilShift = player.facing * 1.5;
+    ctx.beginPath();
+    ctx.arc(x + w * 0.32 + eyeOffsetX + pupilShift, eyeY + 1, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + w * 0.68 + eyeOffsetX + pupilShift, eyeY + 1, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Mouth
+  ctx.strokeStyle = '#3E2723';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  if (!player.onGround) {
+    // Open mouth (excited)
+    ctx.fillStyle = '#5D2E0F';
+    ctx.beginPath();
+    ctx.arc(x + w / 2 + eyeOffsetX, mouthY + 2, 4, 0, Math.PI);
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.arc(x + w / 2 + eyeOffsetX, mouthY, 5, 0.15, Math.PI - 0.15);
+    ctx.stroke();
+  }
+
+  // Cheeks
+  ctx.fillStyle = 'rgba(255, 105, 97, 0.6)';
+  ctx.beginPath();
+  ctx.arc(x + w * 0.22 + eyeOffsetX, mouthY - 2, 3, 0, Math.PI * 2);
+  ctx.arc(x + w * 0.78 + eyeOffsetX, mouthY - 2, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawHUD() {
+  // Coin counter
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  roundRect(15, 15, 130, 40, 12);
+  ctx.fill();
+  // little coin icon
+  ctx.fillStyle = '#FFD600';
+  ctx.beginPath(); ctx.arc(40, 35, 11, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#FF8F00'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#FF8F00';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('★', 40, 36);
+  // text
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 18px "Comic Sans MS", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('× ' + score + ' / ' + coins.length, 60, 36);
+
+  // Level badge (right side)
+  const label = 'LEVEL ' + (currentLevel + 1) + ' — ' + LEVELS[currentLevel].name;
+  ctx.font = 'bold 16px "Comic Sans MS", sans-serif';
+  const tw = ctx.measureText(label).width;
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  roundRect(W - tw - 45, 15, tw + 30, 40, 12);
+  ctx.fill();
+  ctx.fillStyle = 'white';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, W - tw - 30, 36);
+}
+
+// ---------- Loop ----------
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loadLevel(0);
+loop();
+</script>
+</body>
+</html>
