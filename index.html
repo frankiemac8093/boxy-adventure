@@ -262,17 +262,24 @@ function updateSoundButton() {
   soundBtn.setAttribute('aria-label', soundEnabled ? 'Mute sound' : 'Turn sound on');
 }
 
-function unlockAudio() {
-  if (!soundEnabled) return;
+async function unlockAudio() {
+  if (!soundEnabled) return false;
   const AudioCtor = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtor) return;
+  if (!AudioCtor) return false;
   if (!audioCtx) audioCtx = new AudioCtor();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (audioCtx.state === 'suspended') {
+    try {
+      await audioCtx.resume();
+    } catch {
+      return false;
+    }
+  }
+  return audioCtx.state === 'running';
 }
 
-function primeAudio() {
-  unlockAudio();
-  if (!audioCtx || !soundEnabled) return;
+async function primeAudio() {
+  const ready = await unlockAudio();
+  if (!ready || !audioCtx || !soundEnabled) return false;
 
   const t = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
@@ -282,12 +289,16 @@ function primeAudio() {
   gain.connect(audioCtx.destination);
   osc.start(t);
   osc.stop(t + 0.02);
+  return true;
 }
 
 function playTone(freq, duration = 0.12, type = 'square', volume = 0.08, delay = 0) {
   if (!soundEnabled) return;
-  unlockAudio();
   if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().then(() => playTone(freq, duration, type, volume, delay)).catch(() => {});
+    return;
+  }
 
   const t = audioCtx.currentTime + delay;
   const osc = audioCtx.createOscillator();
@@ -305,22 +316,22 @@ function playTone(freq, duration = 0.12, type = 'square', volume = 0.08, delay =
 
 function playSound(name) {
   if (name === 'jump') {
-    playTone(320, 0.08, 'square', 0.07);
-    playTone(520, 0.11, 'square', 0.06, 0.04);
+    playTone(320, 0.08, 'square', 0.12);
+    playTone(520, 0.11, 'square', 0.1, 0.04);
   } else if (name === 'coin') {
-    playTone(880, 0.07, 'triangle', 0.07);
-    playTone(1320, 0.09, 'triangle', 0.06, 0.06);
+    playTone(880, 0.07, 'triangle', 0.11);
+    playTone(1320, 0.09, 'triangle', 0.1, 0.06);
   } else if (name === 'hurt') {
-    playTone(180, 0.11, 'sawtooth', 0.08);
-    playTone(110, 0.16, 'sawtooth', 0.06, 0.08);
+    playTone(180, 0.11, 'sawtooth', 0.12);
+    playTone(110, 0.16, 'sawtooth', 0.1, 0.08);
   } else if (name === 'complete') {
-    playTone(523, 0.1, 'triangle', 0.07);
-    playTone(659, 0.1, 'triangle', 0.07, 0.1);
-    playTone(784, 0.16, 'triangle', 0.08, 0.2);
+    playTone(523, 0.1, 'triangle', 0.11);
+    playTone(659, 0.1, 'triangle', 0.11, 0.1);
+    playTone(784, 0.16, 'triangle', 0.12, 0.2);
   } else if (name === 'win') {
-    playTone(659, 0.12, 'triangle', 0.08);
-    playTone(784, 0.12, 'triangle', 0.08, 0.12);
-    playTone(988, 0.22, 'triangle', 0.09, 0.24);
+    playTone(659, 0.12, 'triangle', 0.12);
+    playTone(784, 0.12, 'triangle', 0.12, 0.12);
+    playTone(988, 0.22, 'triangle', 0.13, 0.24);
   }
 }
 
@@ -621,13 +632,13 @@ function respawnPlayer() {
   spawnParticles(player.x + player.w / 2, player.y + player.h, '#81D4FA', 12);
 }
 
-function performJump() {
+function performJump(withSound = true) {
   if (state !== 'playing' || !player.onGround) return false;
   player.vy = -player.jumpPower;
   player.onGround = false;
   player.squash = 1.4; // stretch up
   jumpBuffer = 0;
-  playSound('jump');
+  if (withSound) playSound('jump');
   spawnParticles(player.x + player.w/2, player.y + player.h, '#A5D6A7', 6);
   return true;
 }
@@ -662,11 +673,20 @@ function bindHoldButton(id, code, onPress = null) {
   };
   button.addEventListener('pointerdown', e => {
     e.preventDefault();
-    primeAudio();
     button.setPointerCapture(e.pointerId);
-    if (onPress) onPress();
     setPressed(true);
+    const audioReady = primeAudio();
+    if (onPress) onPress(audioReady);
   });
+  button.addEventListener('touchstart', e => {
+    e.preventDefault();
+    setPressed(true);
+    const audioReady = primeAudio();
+    if (onPress) onPress(audioReady);
+  }, { passive: false });
+  for (const eventName of ['touchend', 'touchcancel']) {
+    button.addEventListener(eventName, () => setPressed(false), { passive: false });
+  }
   for (const eventName of ['pointerup', 'pointercancel', 'pointerleave']) {
     button.addEventListener(eventName, () => setPressed(false));
   }
@@ -677,9 +697,10 @@ function bindHoldButton(id, code, onPress = null) {
 
 bindHoldButton('leftBtn', 'ArrowLeft');
 bindHoldButton('rightBtn', 'ArrowRight');
-bindHoldButton('jumpBtn', 'Space', () => {
+bindHoldButton('jumpBtn', 'Space', audioReady => {
   jumpBuffer = 8;
-  performJump();
+  const jumped = performJump(false);
+  if (jumped) audioReady.then(ready => { if (ready) playSound('jump'); });
 });
 
 // ---------- Retry button ----------
@@ -692,8 +713,7 @@ soundBtn.addEventListener('click', e => {
   saveSoundEnabled();
   updateSoundButton();
   if (soundEnabled) {
-    primeAudio();
-    playSound('coin');
+    primeAudio().then(ready => { if (ready) playSound('coin'); });
   }
 });
 
