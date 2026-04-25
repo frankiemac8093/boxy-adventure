@@ -1148,9 +1148,6 @@ function draw() {
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
 
-  // Sun
-  drawSun(W - 90 - camX * 0.05, 80);
-
   // Far hills (parallax 0.3)
   ctx.fillStyle = currentTheme.hillFar;
   for (const h of hills) {
@@ -1339,34 +1336,6 @@ function drawWonOverlay() {
   ctx.fillText(`★ ${totalScore} stars collected`, 0, 70);
 
   ctx.restore();
-}
-
-function drawSun(x, y) {
-  // Rays
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(performance.now() / 4000);
-  ctx.fillStyle = '#FFEB3B';
-  for (let i = 0; i < 8; i++) {
-    ctx.rotate(Math.PI / 4);
-    ctx.fillRect(35, -4, 18, 8);
-  }
-  ctx.restore();
-  // Body
-  ctx.fillStyle = '#FFEB3B';
-  ctx.beginPath(); ctx.arc(x, y, 32, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#FFC107';
-  ctx.beginPath(); ctx.arc(x, y, 32, 0, Math.PI * 2); ctx.lineWidth = 3;
-  ctx.strokeStyle = '#FFA000'; ctx.stroke();
-  // Smile
-  ctx.strokeStyle = '#5D4037';
-  ctx.lineWidth = 2.5;
-  ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.arc(x, y + 4, 12, 0.2, Math.PI - 0.2); ctx.stroke();
-  // Eyes
-  ctx.fillStyle = '#5D4037';
-  ctx.beginPath(); ctx.arc(x - 10, y - 6, 3, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(x + 10, y - 6, 3, 0, Math.PI * 2); ctx.fill();
 }
 
 function drawCloud(x, y, s) {
