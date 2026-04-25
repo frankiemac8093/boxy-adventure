@@ -98,6 +98,39 @@
     transform: translateY(3px);
     box-shadow: 0 1px 0 rgba(0,0,0,0.3);
   }
+  .retry-btn {
+    position: absolute;
+    left: 50%;
+    bottom: 70px;
+    transform: translateX(-50%);
+    padding: 14px 36px;
+    font-family: 'Comic Sans MS', 'Trebuchet MS', sans-serif;
+    font-size: 22px;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(180deg, #FFB74D 0%, #FF9800 100%);
+    border: 4px solid #E65100;
+    border-radius: 14px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #BF360C, 0 10px 24px rgba(0,0,0,0.35);
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+    letter-spacing: 1px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease, transform 0.1s, box-shadow 0.1s;
+    line-height: 1;
+  }
+  .retry-btn.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .retry-btn:hover {
+    background: linear-gradient(180deg, #FFC470 0%, #FFA726 100%);
+  }
+  .retry-btn:active {
+    transform: translateX(-50%) translateY(4px);
+    box-shadow: 0 2px 0 #BF360C, 0 4px 12px rgba(0,0,0,0.35);
+  }
   @media (hover: none), (max-width: 760px) {
     body {
       justify-content: flex-start;
@@ -111,6 +144,11 @@
     .touch-controls {
       display: flex;
     }
+    .retry-btn {
+      bottom: 96px;
+      font-size: 18px;
+      padding: 12px 26px;
+    }
   }
 </style>
 </head>
@@ -118,6 +156,7 @@
   <h1>🟧 Boxy Adventure 🌱</h1>
   <div class="game-wrap">
     <canvas id="gameCanvas" width="900" height="500"></canvas>
+    <button id="retryBtn" class="retry-btn" type="button">↻ Retry Game</button>
     <div class="touch-controls" aria-hidden="true">
       <div class="touch-pad">
         <button id="leftBtn" class="touch-btn" type="button">‹</button>
@@ -446,6 +485,16 @@ function respawnPlayer() {
   spawnParticles(player.x + player.w / 2, player.y + player.h, '#81D4FA', 12);
 }
 
+function restartGame() {
+  retryBtn.classList.remove('show');
+  retryBtn.blur(); // so Space/Enter don't re-trigger the button
+  for (const code in keys) keys[code] = false;
+  currentLevel = 0;
+  totalScore = 0;
+  loadLevel(0);
+  state = 'playing';
+}
+
 // ---------- Input ----------
 const keys = {};
 window.addEventListener('keydown', e => {
@@ -473,6 +522,10 @@ function bindHoldButton(id, code) {
 bindHoldButton('leftBtn', 'ArrowLeft');
 bindHoldButton('rightBtn', 'ArrowRight');
 bindHoldButton('jumpBtn', 'Space');
+
+// ---------- Retry button ----------
+const retryBtn = document.getElementById('retryBtn');
+retryBtn.addEventListener('click', restartGame);
 
 function spawnParticles(x, y, color, n = 8) {
   for (let i = 0; i < n; i++) {
@@ -510,6 +563,7 @@ function update() {
       totalScore += score;
       if (currentLevel >= LEVELS.length - 1) {
         state = 'won';
+        retryBtn.classList.add('show');
       } else {
         currentLevel++;
         loadLevel(currentLevel);
