@@ -67,6 +67,7 @@
     left: 16px;
     right: 16px;
     bottom: calc(16px + env(safe-area-inset-bottom));
+    min-height: 72px;
     display: none;
     justify-content: space-between;
     align-items: end;
@@ -88,6 +89,7 @@
     font-family: inherit;
     font-size: 34px;
     font-weight: bold;
+    flex: 0 0 auto;
     line-height: 1;
     box-shadow: 0 4px 0 rgba(0,0,0,0.3);
     text-shadow: 0 2px 0 rgba(0,0,0,0.35);
@@ -176,8 +178,8 @@
   @media (hover: none), (max-width: 760px) {
     body {
       justify-content: flex-start;
-      padding: 6px 4px 108px;
-      padding-bottom: 108px;
+      padding: 6px 4px 328px;
+      padding-bottom: calc(328px + env(safe-area-inset-bottom));
     }
     h1 {
       font-size: 1.35rem;
@@ -188,16 +190,38 @@
       border-width: 4px;
       border-radius: 10px;
       max-width: calc(100vw - 4px);
-      max-height: calc(100vh - 110px - env(safe-area-inset-bottom));
+      max-height: calc(100vh - 328px - env(safe-area-inset-bottom));
     }
     .controls {
       display: none;
     }
     .touch-controls {
-      display: flex;
+      display: block;
+      min-height: 300px;
+      right: 8px;
+    }
+    .touch-pad {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      gap: 20px;
+    }
+    .touch-btn {
+      width: 136px;
+      height: 136px;
+      border-width: 6px;
+      font-size: 68px;
+    }
+    .touch-btn.jump {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 144px;
+      height: 144px;
+      font-size: 68px;
     }
     .retry-btn {
-      bottom: 96px;
+      bottom: 248px;
       font-size: 18px;
       padding: 12px 26px;
     }
