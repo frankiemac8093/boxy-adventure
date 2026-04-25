@@ -60,12 +60,15 @@
     line-height: 0; /* prevent inline-canvas extra space */
   }
   .touch-controls {
-    position: absolute;
-    inset: auto 16px 16px 16px;
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
     display: none;
     justify-content: space-between;
     align-items: end;
     pointer-events: none;
+    z-index: 5;
   }
   .touch-pad {
     display: flex;
@@ -135,6 +138,7 @@
     body {
       justify-content: flex-start;
       padding-top: 10px;
+      padding-bottom: 108px;
     }
     .controls {
       font-size: 0.84rem;
@@ -472,6 +476,7 @@ function restartGame() {
   retryBtn.classList.remove('show');
   retryBtn.blur(); // so Space/Enter don't re-trigger the button
   for (const code in keys) keys[code] = false;
+  jumpBuffer = 0;
   currentLevel = 0;
   totalScore = 0;
   loadLevel(0);
@@ -480,13 +485,15 @@ function restartGame() {
 
 // ---------- Input ----------
 const keys = {};
+let jumpBuffer = 0;
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
+  if (e.code === 'Space') jumpBuffer = 8;
   if (['ArrowLeft','ArrowRight','Space','KeyA','KeyD'].includes(e.code)) e.preventDefault();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-function bindHoldButton(id, code) {
+function bindHoldButton(id, code, onPress = null) {
   const button = document.getElementById(id);
   const setPressed = pressed => {
     keys[code] = pressed;
@@ -495,6 +502,7 @@ function bindHoldButton(id, code) {
   button.addEventListener('pointerdown', e => {
     e.preventDefault();
     button.setPointerCapture(e.pointerId);
+    if (onPress) onPress();
     setPressed(true);
   });
   for (const eventName of ['pointerup', 'pointercancel', 'pointerleave']) {
@@ -504,7 +512,7 @@ function bindHoldButton(id, code) {
 
 bindHoldButton('leftBtn', 'ArrowLeft');
 bindHoldButton('rightBtn', 'ArrowRight');
-bindHoldButton('jumpBtn', 'Space');
+bindHoldButton('jumpBtn', 'Space', () => { jumpBuffer = 8; });
 
 // ---------- Retry button ----------
 const retryBtn = document.getElementById('retryBtn');
@@ -573,12 +581,14 @@ function update() {
   player.vx = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.vx));
 
   // Jump
-  if (keys['Space'] && player.onGround) {
+  if ((keys['Space'] || jumpBuffer > 0) && player.onGround) {
     player.vy = -player.jumpPower;
     player.onGround = false;
     player.squash = 1.4; // stretch up
+    jumpBuffer = 0;
     spawnParticles(player.x + player.w/2, player.y + player.h, '#A5D6A7', 6);
   }
+  if (jumpBuffer > 0) jumpBuffer--;
 
   // Gravity
   player.vy += GRAVITY;
