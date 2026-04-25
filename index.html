@@ -270,6 +270,20 @@ function unlockAudio() {
   if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
+function primeAudio() {
+  unlockAudio();
+  if (!audioCtx || !soundEnabled) return;
+
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.0001, t);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(t);
+  osc.stop(t + 0.02);
+}
+
 function playTone(freq, duration = 0.12, type = 'square', volume = 0.08, delay = 0) {
   if (!soundEnabled) return;
   unlockAudio();
@@ -607,6 +621,17 @@ function respawnPlayer() {
   spawnParticles(player.x + player.w / 2, player.y + player.h, '#81D4FA', 12);
 }
 
+function performJump() {
+  if (state !== 'playing' || !player.onGround) return false;
+  player.vy = -player.jumpPower;
+  player.onGround = false;
+  player.squash = 1.4; // stretch up
+  jumpBuffer = 0;
+  playSound('jump');
+  spawnParticles(player.x + player.w/2, player.y + player.h, '#A5D6A7', 6);
+  return true;
+}
+
 function restartGame() {
   retryBtn.classList.remove('show');
   retryBtn.blur(); // so Space/Enter don't re-trigger the button
@@ -622,7 +647,7 @@ function restartGame() {
 const keys = {};
 let jumpBuffer = 0;
 window.addEventListener('keydown', e => {
-  unlockAudio();
+  primeAudio();
   keys[e.code] = true;
   if (e.code === 'Space') jumpBuffer = 8;
   if (['ArrowLeft','ArrowRight','Space','KeyA','KeyD'].includes(e.code)) e.preventDefault();
@@ -637,7 +662,7 @@ function bindHoldButton(id, code, onPress = null) {
   };
   button.addEventListener('pointerdown', e => {
     e.preventDefault();
-    unlockAudio();
+    primeAudio();
     button.setPointerCapture(e.pointerId);
     if (onPress) onPress();
     setPressed(true);
@@ -652,7 +677,10 @@ function bindHoldButton(id, code, onPress = null) {
 
 bindHoldButton('leftBtn', 'ArrowLeft');
 bindHoldButton('rightBtn', 'ArrowRight');
-bindHoldButton('jumpBtn', 'Space', () => { jumpBuffer = 8; });
+bindHoldButton('jumpBtn', 'Space', () => {
+  jumpBuffer = 8;
+  performJump();
+});
 
 // ---------- Retry button ----------
 const retryBtn = document.getElementById('retryBtn');
@@ -664,7 +692,7 @@ soundBtn.addEventListener('click', e => {
   saveSoundEnabled();
   updateSoundButton();
   if (soundEnabled) {
-    unlockAudio();
+    primeAudio();
     playSound('coin');
   }
 });
@@ -737,14 +765,7 @@ function update() {
   player.vx = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.vx));
 
   // Jump
-  if ((keys['Space'] || jumpBuffer > 0) && player.onGround) {
-    player.vy = -player.jumpPower;
-    player.onGround = false;
-    player.squash = 1.4; // stretch up
-    jumpBuffer = 0;
-    playSound('jump');
-    spawnParticles(player.x + player.w/2, player.y + player.h, '#A5D6A7', 6);
-  }
+  if (keys['Space'] || jumpBuffer > 0) performJump();
   if (jumpBuffer > 0) jumpBuffer--;
 
   // Gravity
