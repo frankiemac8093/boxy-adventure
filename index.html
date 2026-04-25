@@ -142,6 +142,37 @@
     transform: translateX(-50%) translateY(4px);
     box-shadow: 0 2px 0 #BF360C, 0 4px 12px rgba(0,0,0,0.35);
   }
+  .sound-btn {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    width: 44px;
+    height: 44px;
+    border: 3px solid rgba(255,255,255,0.9);
+    border-radius: 50%;
+    background: rgba(0,0,0,0.32);
+    color: white;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 22px;
+    font-weight: bold;
+    line-height: 1;
+    z-index: 6;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.25);
+    text-shadow: 0 2px 0 rgba(0,0,0,0.35);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .sound-btn.off {
+    opacity: 0.72;
+  }
+  .sound-btn:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.25);
+  }
   @media (hover: none), (max-width: 760px) {
     body {
       justify-content: flex-start;
@@ -170,11 +201,20 @@
       font-size: 18px;
       padding: 12px 26px;
     }
+    .sound-btn {
+      top: 8px;
+      right: 8px;
+      width: 38px;
+      height: 38px;
+      font-size: 19px;
+      border-width: 2px;
+    }
   }
 </style>
 </head>
 <body>
   <h1>🟧 Boxy Adventure 🌱</h1>
+  <button id="soundBtn" class="sound-btn" type="button" aria-label="Toggle sound">♪</button>
   <div class="game-wrap">
     <canvas id="gameCanvas" width="900" height="500"></canvas>
     <button id="retryBtn" class="retry-btn" type="button">↻ Retry Game</button>
@@ -194,6 +234,83 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
+const soundBtn = document.getElementById('soundBtn');
+
+// ---------- Sound ----------
+let audioCtx = null;
+let soundEnabled = getSavedSoundEnabled();
+
+function getSavedSoundEnabled() {
+  try {
+    return localStorage.getItem('boxySound') !== 'off';
+  } catch {
+    return true;
+  }
+}
+
+function saveSoundEnabled() {
+  try {
+    localStorage.setItem('boxySound', soundEnabled ? 'on' : 'off');
+  } catch {
+    // localStorage can be unavailable in some privacy modes.
+  }
+}
+
+function updateSoundButton() {
+  soundBtn.textContent = soundEnabled ? '♪' : '×';
+  soundBtn.classList.toggle('off', !soundEnabled);
+  soundBtn.setAttribute('aria-label', soundEnabled ? 'Mute sound' : 'Turn sound on');
+}
+
+function unlockAudio() {
+  if (!soundEnabled) return;
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtor) return;
+  if (!audioCtx) audioCtx = new AudioCtor();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTone(freq, duration = 0.12, type = 'square', volume = 0.08, delay = 0) {
+  if (!soundEnabled) return;
+  unlockAudio();
+  if (!audioCtx) return;
+
+  const t = audioCtx.currentTime + delay;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t);
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(volume, t + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(t);
+  osc.stop(t + duration + 0.02);
+}
+
+function playSound(name) {
+  if (name === 'jump') {
+    playTone(320, 0.08, 'square', 0.07);
+    playTone(520, 0.11, 'square', 0.06, 0.04);
+  } else if (name === 'coin') {
+    playTone(880, 0.07, 'triangle', 0.07);
+    playTone(1320, 0.09, 'triangle', 0.06, 0.06);
+  } else if (name === 'hurt') {
+    playTone(180, 0.11, 'sawtooth', 0.08);
+    playTone(110, 0.16, 'sawtooth', 0.06, 0.08);
+  } else if (name === 'complete') {
+    playTone(523, 0.1, 'triangle', 0.07);
+    playTone(659, 0.1, 'triangle', 0.07, 0.1);
+    playTone(784, 0.16, 'triangle', 0.08, 0.2);
+  } else if (name === 'win') {
+    playTone(659, 0.12, 'triangle', 0.08);
+    playTone(784, 0.12, 'triangle', 0.08, 0.12);
+    playTone(988, 0.22, 'triangle', 0.09, 0.24);
+  }
+}
+
+updateSoundButton();
 
 // ---------- Player ----------
 const player = {
@@ -483,6 +600,7 @@ function placePlayer(x, y) {
 }
 
 function respawnPlayer() {
+  playSound('hurt');
   spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#FF5252', 18);
   placePlayer(80, 200);
   camX = Math.max(0, Math.min(WORLD_W - W, player.x - W / 2));
@@ -504,6 +622,7 @@ function restartGame() {
 const keys = {};
 let jumpBuffer = 0;
 window.addEventListener('keydown', e => {
+  unlockAudio();
   keys[e.code] = true;
   if (e.code === 'Space') jumpBuffer = 8;
   if (['ArrowLeft','ArrowRight','Space','KeyA','KeyD'].includes(e.code)) e.preventDefault();
@@ -518,6 +637,7 @@ function bindHoldButton(id, code, onPress = null) {
   };
   button.addEventListener('pointerdown', e => {
     e.preventDefault();
+    unlockAudio();
     button.setPointerCapture(e.pointerId);
     if (onPress) onPress();
     setPressed(true);
@@ -537,6 +657,21 @@ bindHoldButton('jumpBtn', 'Space', () => { jumpBuffer = 8; });
 // ---------- Retry button ----------
 const retryBtn = document.getElementById('retryBtn');
 retryBtn.addEventListener('click', restartGame);
+
+soundBtn.addEventListener('click', e => {
+  e.preventDefault();
+  soundEnabled = !soundEnabled;
+  saveSoundEnabled();
+  updateSoundButton();
+  if (soundEnabled) {
+    unlockAudio();
+    playSound('coin');
+  }
+});
+
+for (const eventName of ['contextmenu', 'selectstart', 'dragstart']) {
+  soundBtn.addEventListener(eventName, e => e.preventDefault());
+}
 
 function spawnParticles(x, y, color, n = 8) {
   for (let i = 0; i < n; i++) {
@@ -575,6 +710,7 @@ function update() {
       if (currentLevel >= LEVELS.length - 1) {
         state = 'won';
         retryBtn.classList.add('show');
+        playSound('win');
       } else {
         currentLevel++;
         loadLevel(currentLevel);
@@ -606,6 +742,7 @@ function update() {
     player.onGround = false;
     player.squash = 1.4; // stretch up
     jumpBuffer = 0;
+    playSound('jump');
     spawnParticles(player.x + player.w/2, player.y + player.h, '#A5D6A7', 6);
   }
   if (jumpBuffer > 0) jumpBuffer--;
@@ -660,6 +797,7 @@ function update() {
   if (player.x + player.w > finishX && state === 'playing') {
     state = 'complete';
     completeTimer = 150; // ~2.5 seconds at 60fps
+    playSound('complete');
     spawnParticles(player.x + player.w/2, player.y + player.h/2, '#FFD600', 24);
   }
 
@@ -688,6 +826,7 @@ function update() {
           Math.abs(player.y + player.h/2 - c.y) < 22) {
         c.taken = true;
         score++;
+        playSound('coin');
         spawnParticles(c.x, c.y, '#FFD600', 12);
       }
     }
