@@ -381,10 +381,54 @@ const GRAVITY = 0.6;
 const GROUND_Y = H - 60;
 
 // ---------- Levels ----------
+const THEMES = {
+  meadow: {
+    hillFar: '#66BB6A',
+    hillMid: '#43A047',
+    dirt: '#8B5A2B',
+    dirtDot: '#6D4C2A',
+    top: '#4CAF50',
+    topLight: '#81C784',
+    blade: '#2E7D32',
+    flowers: ['#FF4081', '#FFEB3B', '#E91E63', '#FFFFFF', '#9C27B0'],
+  },
+  sunset: {
+    hillFar: '#D96B3A',
+    hillMid: '#A94F32',
+    dirt: '#87502A',
+    dirtDot: '#5D3520',
+    top: '#7CB342',
+    topLight: '#C0CA33',
+    blade: '#558B2F',
+    flowers: ['#FFEB3B', '#FF9800', '#F44336', '#FFF3E0', '#D84315'],
+  },
+  jungle: {
+    hillFar: '#1B8F55',
+    hillMid: '#0B6B3A',
+    dirt: '#5D3A1F',
+    dirtDot: '#3E2616',
+    top: '#128C4A',
+    topLight: '#46C06E',
+    blade: '#064D2C',
+    flowers: ['#FFEB3B', '#FF4081', '#00E676', '#26C6DA', '#FF7043'],
+  },
+  snow: {
+    hillFar: '#B3E5FC',
+    hillMid: '#81D4FA',
+    dirt: '#6D7F8F',
+    dirtDot: '#455A64',
+    top: '#F5FBFF',
+    topLight: '#B3E5FC',
+    blade: '#90A4AE',
+    flowers: ['#E1F5FE', '#FFFFFF', '#B3E5FC', '#80DEEA', '#CFD8DC'],
+  },
+};
+
 const LEVELS = [
   // ===== LEVEL 1 — Sunny Meadow =====
   {
     name: 'Sunny Meadow',
+    theme: 'meadow',
     width: 7200,
     skyTop: '#4FC3F7',
     skyBottom: '#B3E5FC',
@@ -462,6 +506,7 @@ const LEVELS = [
   // ===== LEVEL 2 — Sunset Hills =====
   {
     name: 'Sunset Hills',
+    theme: 'sunset',
     width: 7200,
     skyTop: '#FF7043',
     skyBottom: '#FFCC80',
@@ -556,6 +601,147 @@ const LEVELS = [
       [6320, 240], [6520, 180], [6720, 220], [6920, 160],
     ],
   },
+
+  // ===== LEVEL 3 — Jungle Canopy =====
+  {
+    name: 'Jungle Canopy',
+    theme: 'jungle',
+    width: 7400,
+    skyTop: '#009688',
+    skyBottom: '#A5D6A7',
+    finishX: 7250,
+    hazards: [
+      { x: 760, y: GROUND_Y - 18, w: 80, h: 18 },
+      { x: 1475, y: GROUND_Y - 18, w: 90, h: 18 },
+      { x: 2390, y: GROUND_Y - 18, w: 90, h: 18 },
+      { x: 3560, y: GROUND_Y - 18, w: 100, h: 18 },
+      { x: 4685, y: GROUND_Y - 18, w: 80, h: 18 },
+      { x: 5780, y: GROUND_Y - 18, w: 95, h: 18 },
+      { x: 6460, y: GROUND_Y - 18, w: 95, h: 18 },
+    ],
+    platforms: [
+      { x: 0,    y: GROUND_Y, w: 700,  h: 60, ground: true },
+      { x: 850,  y: GROUND_Y, w: 550,  h: 60, ground: true },
+      { x: 1560, y: GROUND_Y, w: 700,  h: 60, ground: true },
+      { x: 2520, y: GROUND_Y, w: 850,  h: 60, ground: true },
+      { x: 3720, y: GROUND_Y, w: 850,  h: 60, ground: true },
+      { x: 4850, y: GROUND_Y, w: 820,  h: 60, ground: true },
+      { x: 5920, y: GROUND_Y, w: 440,  h: 60, ground: true },
+      { x: 6600, y: GROUND_Y, w: 800,  h: 60, ground: true },
+      { x: 260,  y: 340, w: 130, h: 24 },
+      { x: 460,  y: 260, w: 120, h: 24 },
+      { x: 660,  y: 190, w: 120, h: 24 },
+      { x: 900,  y: 300, w: 140, h: 24 },
+      { x: 1120, y: 220, w: 120, h: 24 },
+      { x: 1320, y: 300, w: 110, h: 24 },
+      { x: 1620, y: 330, w: 120, h: 24 },
+      { x: 1800, y: 250, w: 120, h: 24 },
+      { x: 1980, y: 170, w: 120, h: 24 },
+      { x: 2160, y: 250, w: 120, h: 24 },
+      { x: 2380, y: 330, w: 120, h: 24 },
+      { x: 2660, y: 300, w: 110, h: 24 },
+      { x: 2820, y: 230, w: 110, h: 24 },
+      { x: 2980, y: 160, w: 110, h: 24 },
+      { x: 3160, y: 240, w: 120, h: 24 },
+      { x: 3380, y: 320, w: 130, h: 24 },
+      { x: 3780, y: 280, w: 120, h: 24 },
+      { x: 3960, y: 200, w: 120, h: 24 },
+      { x: 4140, y: 280, w: 120, h: 24 },
+      { x: 4320, y: 350, w: 120, h: 24 },
+      { x: 4620, y: 300, w: 110, h: 24 },
+      { x: 4800, y: 220, w: 110, h: 24 },
+      { x: 4980, y: 150, w: 110, h: 24 },
+      { x: 5180, y: 230, w: 120, h: 24 },
+      { x: 5400, y: 310, w: 130, h: 24 },
+      { x: 5940, y: 300, w: 110, h: 24 },
+      { x: 6100, y: 220, w: 110, h: 24 },
+      { x: 6260, y: 300, w: 110, h: 24 },
+      { x: 6640, y: 320, w: 120, h: 24 },
+      { x: 6840, y: 250, w: 120, h: 24 },
+      { x: 7040, y: 190, w: 120, h: 24 },
+    ],
+    coinSpots: [
+      [300, 300], [500, 220], [700, 150],
+      [950, 260], [1160, 180], [1360, 260],
+      [1660, 290], [1840, 210], [2020, 130], [2200, 210], [2420, 290],
+      [2700, 260], [2860, 190], [3020, 120], [3200, 200], [3420, 280],
+      [3820, 240], [4000, 160], [4180, 240], [4360, 310],
+      [4660, 260], [4840, 180], [5020, 110], [5220, 190], [5440, 270],
+      [5980, 260], [6140, 180], [6300, 260],
+      [6680, 280], [6880, 210], [7080, 150],
+    ],
+  },
+
+  // ===== LEVEL 4 — Snowy Summit =====
+  {
+    name: 'Snowy Summit',
+    theme: 'snow',
+    width: 7400,
+    skyTop: '#5C6BC0',
+    skyBottom: '#E1F5FE',
+    finishX: 7250,
+    hazards: [
+      { x: 690, y: GROUND_Y - 18, w: 85, h: 18 },
+      { x: 1295, y: GROUND_Y - 18, w: 90, h: 18 },
+      { x: 2200, y: GROUND_Y - 18, w: 100, h: 18 },
+      { x: 3335, y: GROUND_Y - 18, w: 95, h: 18 },
+      { x: 4505, y: GROUND_Y - 18, w: 100, h: 18 },
+      { x: 5690, y: GROUND_Y - 18, w: 95, h: 18 },
+      { x: 6540, y: GROUND_Y - 18, w: 90, h: 18 },
+    ],
+    platforms: [
+      { x: 0,    y: GROUND_Y, w: 640,  h: 60, ground: true },
+      { x: 820,  y: GROUND_Y, w: 420,  h: 60, ground: true },
+      { x: 1440, y: GROUND_Y, w: 660,  h: 60, ground: true },
+      { x: 2360, y: GROUND_Y, w: 880,  h: 60, ground: true },
+      { x: 3500, y: GROUND_Y, w: 880,  h: 60, ground: true },
+      { x: 4700, y: GROUND_Y, w: 860,  h: 60, ground: true },
+      { x: 5860, y: GROUND_Y, w: 560,  h: 60, ground: true },
+      { x: 6720, y: GROUND_Y, w: 680,  h: 60, ground: true },
+      { x: 220,  y: 360, w: 110, h: 22 },
+      { x: 390,  y: 300, w: 100, h: 22 },
+      { x: 560,  y: 240, w: 100, h: 22 },
+      { x: 860,  y: 300, w: 110, h: 22 },
+      { x: 1030, y: 230, w: 100, h: 22 },
+      { x: 1200, y: 160, w: 100, h: 22 },
+      { x: 1500, y: 340, w: 120, h: 22 },
+      { x: 1680, y: 260, w: 110, h: 22 },
+      { x: 1860, y: 190, w: 110, h: 22 },
+      { x: 2040, y: 260, w: 110, h: 22 },
+      { x: 2400, y: 320, w: 110, h: 22 },
+      { x: 2560, y: 250, w: 110, h: 22 },
+      { x: 2720, y: 180, w: 110, h: 22 },
+      { x: 2900, y: 250, w: 110, h: 22 },
+      { x: 3100, y: 330, w: 110, h: 22 },
+      { x: 3540, y: 300, w: 110, h: 22 },
+      { x: 3720, y: 220, w: 110, h: 22 },
+      { x: 3900, y: 150, w: 110, h: 22 },
+      { x: 4100, y: 230, w: 110, h: 22 },
+      { x: 4320, y: 310, w: 110, h: 22 },
+      { x: 4740, y: 340, w: 120, h: 22 },
+      { x: 4920, y: 270, w: 110, h: 22 },
+      { x: 5100, y: 200, w: 110, h: 22 },
+      { x: 5280, y: 270, w: 110, h: 22 },
+      { x: 5480, y: 340, w: 120, h: 22 },
+      { x: 5900, y: 290, w: 110, h: 22 },
+      { x: 6060, y: 220, w: 110, h: 22 },
+      { x: 6220, y: 150, w: 110, h: 22 },
+      { x: 6420, y: 250, w: 110, h: 22 },
+      { x: 6760, y: 310, w: 120, h: 22 },
+      { x: 6960, y: 240, w: 120, h: 22 },
+      { x: 7160, y: 180, w: 120, h: 22 },
+    ],
+    coinSpots: [
+      [260, 320], [430, 260], [600, 200],
+      [900, 260], [1070, 190], [1240, 120],
+      [1540, 300], [1720, 220], [1900, 150], [2080, 220],
+      [2440, 280], [2600, 210], [2760, 140], [2940, 210], [3140, 290],
+      [3580, 260], [3760, 180], [3940, 110], [4140, 190], [4360, 270],
+      [4780, 300], [4960, 230], [5140, 160], [5320, 230], [5520, 300],
+      [5940, 250], [6100, 180], [6260, 110], [6460, 210],
+      [6800, 270], [7000, 200], [7200, 140],
+    ],
+  },
 ];
 
 // ---------- Mutable world (set by loadLevel) ----------
@@ -568,6 +754,7 @@ let hazards = [];
 let WORLD_W = 0;
 let finishX = 0;
 let skyTop = '#4FC3F7', skyBottom = '#B3E5FC';
+let currentTheme = THEMES.meadow;
 
 // ---------- Camera & particles ----------
 let camX = 0;
@@ -586,6 +773,7 @@ function loadLevel(index) {
   finishX = L.finishX;
   skyTop = L.skyTop;
   skyBottom = L.skyBottom;
+  currentTheme = THEMES[L.theme] || THEMES.meadow;
 
   platforms = L.platforms.map(p => ({ ...p }));
   hazards = (L.hazards || []).map(h => ({ ...h }));
@@ -598,7 +786,7 @@ function loadLevel(index) {
         flowers.push({
           x: p.x + 15 + Math.random() * (p.w - 30),
           y: p.y - 2,
-          color: ['#FF4081','#FFEB3B','#E91E63','#FFFFFF','#9C27B0'][Math.floor(Math.random()*5)],
+          color: currentTheme.flowers[Math.floor(Math.random() * currentTheme.flowers.length)],
         });
       }
     }
@@ -931,7 +1119,7 @@ function draw() {
   drawSun(W - 90 - camX * 0.05, 80);
 
   // Far hills (parallax 0.3)
-  ctx.fillStyle = '#66BB6A';
+  ctx.fillStyle = currentTheme.hillFar;
   for (const h of hills) {
     const hx = h.x - camX * 0.3;
     if (hx + h.r * 2 > 0 && hx - h.r * 2 < W) {
@@ -942,7 +1130,7 @@ function draw() {
   }
 
   // Mid hills (parallax 0.55, darker)
-  ctx.fillStyle = '#43A047';
+  ctx.fillStyle = currentTheme.hillMid;
   for (let i = 0; i < hills.length; i += 2) {
     const h = hills[i];
     const hx = h.x * 1.2 - camX * 0.55;
@@ -1180,17 +1368,17 @@ function drawCloud(x, y, s) {
 
 function drawPlatform(p) {
   // Dirt body
-  ctx.fillStyle = '#8B5A2B';
+  ctx.fillStyle = currentTheme.dirt;
   ctx.fillRect(p.x, p.y + 14, p.w, p.h - 14);
   // Dirt texture dots
-  ctx.fillStyle = '#6D4C2A';
+  ctx.fillStyle = currentTheme.dirtDot;
   for (let i = 0; i < p.w; i += 24) {
     ctx.beginPath();
     ctx.arc(p.x + i + 12, p.y + 28 + (i % 2) * 10, 2.5, 0, Math.PI * 2);
     ctx.fill();
   }
   // Grass top (rounded)
-  ctx.fillStyle = '#4CAF50';
+  ctx.fillStyle = currentTheme.top;
   ctx.beginPath();
   ctx.moveTo(p.x, p.y + 16);
   ctx.lineTo(p.x, p.y + 6);
@@ -1203,14 +1391,14 @@ function drawPlatform(p) {
   ctx.closePath();
   ctx.fill();
   // Lighter grass highlight
-  ctx.fillStyle = '#81C784';
+  ctx.fillStyle = currentTheme.topLight;
   for (let i = 6; i < p.w - 6; i += 14) {
     ctx.beginPath();
     ctx.arc(p.x + i + 4, p.y + 2, 2, 0, Math.PI * 2);
     ctx.fill();
   }
   // Grass blades
-  ctx.strokeStyle = '#2E7D32';
+  ctx.strokeStyle = currentTheme.blade;
   ctx.lineWidth = 1.5;
   for (let i = 8; i < p.w - 8; i += 18) {
     ctx.beginPath();
