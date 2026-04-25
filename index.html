@@ -166,7 +166,7 @@
     </div>
   </div>
   <div class="controls">
-    <kbd>A</kbd>/<kbd>←</kbd> move · <kbd>D</kbd>/<kbd>→</kbd> move · <kbd>Space</kbd> jump · <kbd>R</kbd> restart
+    <kbd>A</kbd>/<kbd>←</kbd> move · <kbd>D</kbd>/<kbd>→</kbd> move · <kbd>Space</kbd> jump
   </div>
 
 <script>
@@ -402,7 +402,6 @@ let state = 'playing';   // 'playing' | 'complete' | 'won'
 let completeTimer = 0;
 let score = 0;            // coins on current level
 let totalScore = 0;       // coins collected across all levels
-let deaths = 0;
 let activeCheckpoint = null;
 let checkpointToast = 0;
 
@@ -480,7 +479,6 @@ function placePlayer(x, y) {
 }
 
 function respawnPlayer() {
-  deaths++;
   spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#FF5252', 18);
   placePlayer(activeCheckpoint.x, activeCheckpoint.y);
   camX = Math.max(0, Math.min(WORLD_W - W, player.x - W / 2));
@@ -492,7 +490,6 @@ function restartGame() {
   retryBtn.blur(); // so Space/Enter don't re-trigger the button
   currentLevel = 0;
   totalScore = 0;
-  deaths = 0;
   loadLevel(0);
   state = 'playing';
 }
@@ -501,8 +498,7 @@ function restartGame() {
 const keys = {};
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
-  if (e.code === 'KeyR') restartGame();
-  if (['ArrowLeft','ArrowRight','Space','KeyA','KeyD','KeyR'].includes(e.code)) e.preventDefault();
+  if (['ArrowLeft','ArrowRight','Space','KeyA','KeyD'].includes(e.code)) e.preventDefault();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
@@ -652,7 +648,7 @@ function update() {
   }
   if (checkpointToast > 0) checkpointToast--;
 
-  // Spikes are small, readable hazards that restart from the latest checkpoint.
+  // Spikes are small, readable hazards that respawn from the latest checkpoint.
   for (const h of hazards) {
     if (rectCollide(player, h)) {
       respawnPlayer();
@@ -1210,16 +1206,6 @@ function drawHUD() {
   ctx.font = 'bold 18px "Comic Sans MS", sans-serif';
   ctx.textAlign = 'left';
   ctx.fillText('× ' + score + ' / ' + coins.length, 60, 36);
-
-  // Mistake counter
-  ctx.fillStyle = 'rgba(0,0,0,0.34)';
-  roundRect(15, 62, 150, 34, 10);
-  ctx.fill();
-  ctx.fillStyle = '#FFCDD2';
-  ctx.font = 'bold 15px "Comic Sans MS", sans-serif';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('Restarts: ' + deaths, 32, 79);
 
   // Level badge (right side)
   const label = 'LEVEL ' + (currentLevel + 1) + ' — ' + LEVELS[currentLevel].name;
