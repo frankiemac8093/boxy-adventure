@@ -433,13 +433,6 @@ const LEVELS = [
     skyTop: '#4FC3F7',
     skyBottom: '#B3E5FC',
     finishX: 7050,
-    hazards: [
-      { x: 610, y: GROUND_Y - 18, w: 70, h: 18 },
-      { x: 1745, y: GROUND_Y - 18, w: 75, h: 18 },
-      { x: 3625, y: GROUND_Y - 18, w: 90, h: 18 },
-      { x: 4370, y: GROUND_Y - 18, w: 90, h: 18 },
-      { x: 5890, y: GROUND_Y - 18, w: 70, h: 18 },
-    ],
     platforms: [
       // ground (with gaps)
       { x: 0,    y: GROUND_Y, w: 600,  h: 60, ground: true },
@@ -511,15 +504,6 @@ const LEVELS = [
     skyTop: '#FF7043',
     skyBottom: '#FFCC80',
     finishX: 7050,
-    hazards: [
-      { x: 535, y: GROUND_Y - 18, w: 80, h: 18 },
-      { x: 1530, y: GROUND_Y - 18, w: 85, h: 18 },
-      { x: 2680, y: GROUND_Y - 18, w: 80, h: 18 },
-      { x: 3735, y: GROUND_Y - 18, w: 85, h: 18 },
-      { x: 4975, y: GROUND_Y - 18, w: 80, h: 18 },
-      { x: 5525, y: GROUND_Y - 18, w: 80, h: 18 },
-      { x: 6025, y: GROUND_Y - 18, w: 85, h: 18 },
-    ],
     platforms: [
       // ground (with gaps — trickier spacing)
       { x: 0,    y: GROUND_Y, w: 500,  h: 60, ground: true },
@@ -610,13 +594,6 @@ const LEVELS = [
     skyTop: '#009688',
     skyBottom: '#A5D6A7',
     finishX: 7250,
-    hazards: [
-      { x: 780, y: GROUND_Y - 18, w: 55, h: 18 },
-      { x: 1510, y: GROUND_Y - 18, w: 55, h: 18 },
-      { x: 3600, y: GROUND_Y - 18, w: 60, h: 18 },
-      { x: 4720, y: GROUND_Y - 18, w: 55, h: 18 },
-      { x: 6500, y: GROUND_Y - 18, w: 55, h: 18 },
-    ],
     platforms: [
       { x: 0,    y: GROUND_Y, w: 760,  h: 60, ground: true },
       { x: 835,  y: GROUND_Y, w: 675,  h: 60, ground: true },
@@ -678,13 +655,6 @@ const LEVELS = [
     skyTop: '#5C6BC0',
     skyBottom: '#E1F5FE',
     finishX: 7250,
-    hazards: [
-      { x: 690, y: GROUND_Y - 18, w: 55, h: 18 },
-      { x: 1325, y: GROUND_Y - 18, w: 55, h: 18 },
-      { x: 3375, y: GROUND_Y - 18, w: 55, h: 18 },
-      { x: 4540, y: GROUND_Y - 18, w: 60, h: 18 },
-      { x: 6570, y: GROUND_Y - 18, w: 55, h: 18 },
-    ],
     platforms: [
       { x: 0,    y: GROUND_Y, w: 690,  h: 60, ground: true },
       { x: 760,  y: GROUND_Y, w: 565,  h: 60, ground: true },
@@ -746,7 +716,6 @@ let clouds = [];
 let hills = [];
 let flowers = [];
 let coins = [];
-let hazards = [];
 let WORLD_W = 0;
 let finishX = 0;
 let skyTop = '#4FC3F7', skyBottom = '#B3E5FC';
@@ -772,7 +741,6 @@ function loadLevel(index) {
   currentTheme = THEMES[L.theme] || THEMES.meadow;
 
   platforms = L.platforms.map(p => ({ ...p }));
-  hazards = (L.hazards || []).map(h => ({ ...h }));
 
   // flowers on ground sections
   flowers = [];
@@ -1034,14 +1002,6 @@ function update() {
   if (player.x < 0) player.x = 0;
   if (player.x + player.w > WORLD_W) player.x = WORLD_W - player.w;
 
-  // Spikes are small, readable hazards that send the player back to the start.
-  for (const h of hazards) {
-    if (rectCollide(player, h)) {
-      respawnPlayer();
-      break;
-    }
-  }
-
   // Finish flag — touching it completes the level
   if (player.x + player.w > finishX && state === 'playing') {
     state = 'complete';
@@ -1151,9 +1111,6 @@ function draw() {
     drawPlatform(p);
   }
 
-  // Hazards
-  for (const h of hazards) drawSpikeHazard(h);
-
   // Flowers
   for (const f of flowers) drawFlower(f.x, f.y, f.color);
 
@@ -1223,32 +1180,6 @@ function drawFinishFlag(x, groundY) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('★', x + 28, groundY - 110 + Math.sin(t + 3) * 3);
-}
-
-function drawSpikeHazard(h) {
-  const spikeCount = Math.max(2, Math.floor(h.w / 18));
-  const spikeW = h.w / spikeCount;
-
-  ctx.fillStyle = '#78909C';
-  ctx.strokeStyle = '#37474F';
-  ctx.lineWidth = 2;
-  for (let i = 0; i < spikeCount; i++) {
-    const x = h.x + i * spikeW;
-    ctx.beginPath();
-    ctx.moveTo(x, h.y + h.h);
-    ctx.lineTo(x + spikeW / 2, h.y);
-    ctx.lineTo(x + spikeW, h.y + h.h);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  ctx.fillStyle = 'rgba(255,255,255,0.45)';
-  for (let i = 0; i < spikeCount; i++) {
-    ctx.beginPath();
-    ctx.arc(h.x + i * spikeW + spikeW * 0.58, h.y + 7, 2, 0, Math.PI * 2);
-    ctx.fill();
-  }
 }
 
 function drawCompleteOverlay() {
